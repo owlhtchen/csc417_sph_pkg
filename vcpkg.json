@@ -3,6 +3,9 @@
     "version-string": "1.0",
     "dependencies": [
         "tbb",
-        "libigl"
+        {
+            "name": "libigl",
+            "features": ["opengl", "glfw", "imgui"]
+        }
     ]
 }
