@@ -1,0 +1,8 @@
+{
+    "name": "417fluid",
+    "version-string": "1.0",
+    "dependencies": [
+        "tbb",
+        "libigl"
+    ]
+}
