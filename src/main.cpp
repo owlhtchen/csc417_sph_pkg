@@ -20,11 +20,15 @@ int main()
   igl::cotmatrix(V,F,L);
   std::cout<<"Hello, mesh: "<<std::endl<<L*V<<std::endl;
 
-    int n = 100;
-     parallel_for( blocked_range<size_t>(0,n),
-      [=](const blocked_range<size_t>& r) {
-                      for(size_t i=r.begin(); i!=r.end(); ++i)
-                          std::cout << (100 + i) << std::endl;
-                  }
-    );
+   int n = 100;
+    parallel_for( blocked_range<size_t>(0,n),
+     [=](const blocked_range<size_t>& r) {
+                     for(size_t i=r.begin(); i!=r.end(); ++i)
+                         std::cout << (100 + i) << std::endl;
+                 }
+  );
+
+// https://software.intel.com/content/www/us/en/develop/documentation/onetbb-documentation/top/onetbb-developer-guide/parallelizing-simple-loops/parallel-for/lambda-expressions.html
+    #pragma warning(disable: 588)
+    parallel_for(size_t(0), n, [=](size_t i) {std::cout << (100 + i) << std::endl;});
 }
