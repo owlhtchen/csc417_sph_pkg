@@ -4,6 +4,8 @@
 #include <EigenTypes.h>
 #include <algorithm>
 #include <tbb/tbb.h>
+#include <vector>
+#include <AtomicInt.h>
 
 using namespace tbb;
 
@@ -21,7 +23,7 @@ class Particles {
     Eigen::VectorXd new_densities;
 
     Eigen::MatrixXi cells;   // flatten x, y, z index of cell
-    Eigen::VectorXi num_particles_per_cell;
+    std::vector<AtomicInt> num_particles_per_cell; // flatten x, y, z index of cell
     Eigen::MatrixXi paritcle_neighbors; 
     Eigen::VectorXi particle_num_neighbors;
 
@@ -63,6 +65,7 @@ class Particles {
             n_cells_y = n_cells_x;
             n_cells_z = n_cells_x;
 
+            std::cout << (n_cells_x * n_cells_y * n_cells_z) << std::endl;
             cells.resize(n_cells_x * n_cells_y * n_cells_z, max_num_particles_per_cell);
             num_particles_per_cell.resize(n_cells_x * n_cells_y * n_cells_z);
             paritcle_neighbors.resize(num_particles, particle_max_num_neighbors);
@@ -84,7 +87,7 @@ class Particles {
 
     void reset_cells_neighbors() {
         for(int i = 0; i < n_cells_x * n_cells_y * n_cells_z; i++) {
-            num_particles_per_cell(i) = 0;
+            num_particles_per_cell[i] = AtomicInt(0);
         }
         for(int i = 0; i < num_particles; i++) {
             particle_num_neighbors(i) = 0;
@@ -101,16 +104,21 @@ class Particles {
     }  
 
     void set_cells() {
-        parallel_for(0, num_particles, [=](int i) {std::cout << (100 + i) << std::endl;});
-        for(int pid = 0; pid < num_particles; pid++) {
+        parallel_for(0, num_particles, [=](int pid) {
             Eigen::Vector3i grid = get_grid(positions.row(pid));
             int grid_x = grid(0); int grid_y = grid(1); int grid_z = grid(2);
-            cells(grid_x * (n_cells_y * n_cells_z))
-        }
+            int cid = grid_x * (n_cells_y * n_cells_z) + grid_y * n_cells_z + grid_z;
+            int pid_cell = num_particles_per_cell.at(cid).fetch_add(1);
+            cells(cid, pid_cell) = pid;
+        });
+    }
+
+    void set_particle_neighbor(int pid) {
+
     }
 
     void update() {
         reset_cells_neighbors();
-
+        set_cells();
     }       
 };
