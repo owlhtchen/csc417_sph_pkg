@@ -3,32 +3,25 @@
 #include <Eigen/Sparse>
 #include <iostream>
 #include <tbb/tbb.h>
+#include <igl/opengl/glfw/Viewer.h>
+#include <setup.h>
+#include <Particles.h>
 
 using namespace tbb;
 
 int main()
 {
-  Eigen::MatrixXd V(4,2);
-  V<<0,0,
-     1,0,
-     1,1,
-     0,1;
-  Eigen::MatrixXi F(2,3);
-  F<<0,1,2,
-     0,2,3;
-  Eigen::SparseMatrix<double> L;
-  igl::cotmatrix(V,F,L);
-  std::cout<<"Hello, mesh: "<<std::endl<<L*V<<std::endl;
-
-   int n = 100;
-    parallel_for( blocked_range<size_t>(0,n),
-     [=](const blocked_range<size_t>& r) {
-                     for(size_t i=r.begin(); i!=r.end(); ++i)
-                         std::cout << (100 + i) << std::endl;
-                 }
-  );
-
-// https://software.intel.com/content/www/us/en/develop/documentation/onetbb-documentation/top/onetbb-developer-guide/parallelizing-simple-loops/parallel-for/lambda-expressions.html
-    #pragma warning(disable: 588)
-    parallel_for(size_t(0), n, [=](size_t i) {std::cout << (100 + i) << std::endl;});
+    igl::opengl::glfw::Viewer viewer;
+    using Eigen::MatrixXd; using Eigen::VectorXd;
+    using std::cout; using std::endl; using std::vector;
+    
+    vector<double> _positions;
+    setup_positions(_positions, 0.08);
+    double radius = 3.0 / 400;
+    Particles particles(_positions, radius);
+    cout << "hello" << endl;
+    cout << "??? " << _positions.size() << endl;
+    viewer.data().set_points(particles.positions, Eigen::RowVector3d(1.0,1.0,1.0));
+    viewer.data().point_size = 10;
+    viewer.launch();
 }
