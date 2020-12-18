@@ -18,7 +18,7 @@ class Particles {
     Eigen::MatrixXd positions;
     Eigen::MatrixXd velocities;
     Eigen::VectorXd densities;
-    std::vector<bool> is_wall;
+    std::vector<int> is_wall;
 
     Eigen::MatrixXd new_positions;
     Eigen::MatrixXd new_velocities;
@@ -50,7 +50,7 @@ class Particles {
 
     int x_lower, x_upper, y_lower, z_lower, z_upper;
 
-    Particles(std::vector<double> _positions, std::vector<bool> _is_wall,
+    Particles(std::vector<double> _positions, std::vector<int> _is_wall,
      double radius, int x_lower = 0.0, int x_upper = 1.0, int y_lower = 0.0): 
         num_particles(int(_positions.size()/3)), radius(radius), volume(pi * radius * radius),
         x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), z_lower(x_lower), z_upper(x_upper) {
@@ -285,19 +285,19 @@ class Particles {
             if (velocities.row(pid).x() < 0.0) {
                 velocities.row(pid).x()  += -1.5  * velocities.row(pid).x();
             }
-            positions.row(pid).x()  = positions.row(pid).x();
+            positions.row(pid).x()  = x_lower;
         }    
         if(positions.row(pid).y() < y_lower) {
             if (velocities.row(pid).y() < 0.0) {
                 velocities.row(pid).y()  += -1.5  * velocities.row(pid).y();
             }
-            positions.row(pid).y()  = positions.row(pid).y();
+            positions.row(pid).y()  = y_lower;
         }     
         if(positions.row(pid).z() < z_lower) {
             if (velocities.row(pid).z() < 0.0) {
                 velocities.row(pid).z()  += -1.5  * velocities.row(pid).z();
             }
-            positions.row(pid).z()  = positions.row(pid).z();
+            positions.row(pid).z()  = z_lower;
         }                  
     }
 

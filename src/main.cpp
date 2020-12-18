@@ -38,7 +38,7 @@ int main()
     using std::cout; using std::endl; using std::vector;
     
     vector<double> _positions;
-    vector<bool> _is_wall;
+    vector<int> _is_wall;
     setup_ball_positions(_positions, _is_wall, 0.08);
     double radius = 3.0 / 400;
     Particles particles(_positions, _is_wall, radius);
