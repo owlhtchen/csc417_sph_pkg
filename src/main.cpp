@@ -16,9 +16,10 @@ int main()
     using std::cout; using std::endl; using std::vector;
     
     vector<double> _positions;
-    setup_positions(_positions, 0.08);
+    vector<bool> _is_wall;
+    setup_ball_positions(_positions, _is_wall, 0.08);
     double radius = 3.0 / 400;
-    Particles particles(_positions, radius);
+    Particles particles(_positions, _is_wall, radius);
     cout << "hello" << endl;
     cout << "??? " << _positions.size() << endl;
     viewer.data().set_points(particles.positions, Eigen::RowVector3d(1.0,1.0,1.0));
