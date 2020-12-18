@@ -9,6 +9,8 @@
 
 using namespace tbb;
 
+using std::cout; using std::endl;
+
 class Particles {
     
     public:
@@ -264,6 +266,7 @@ class Particles {
     }      
 
     void update1() {
+        // cout << "update1 " << endl;
         reset_cells_neighbors();
         set_cells();
         set_particles_neighbors();
