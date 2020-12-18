@@ -278,6 +278,9 @@ class Particles {
             double ddensity = ddensity_dt(pid);
             new_densities[pid] = densities[pid] + delta_t * ddensity;
         });
+        if(isnan(new_positions.sum())) {
+            abort();
+        }
     }
 
     void collide_with_lower(int pid) {
