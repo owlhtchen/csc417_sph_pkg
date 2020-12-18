@@ -6,6 +6,7 @@
 #include <tbb/tbb.h>
 #include <vector>
 #include <AtomicInt.h>
+#include <assert.h>
 
 using namespace tbb;
 
@@ -14,6 +15,18 @@ using std::cout; using std::endl;
 class Particles {
     
     public:
+    const double init_density = 1000.0;
+    const Eigen::Vector3d gravity = Eigen::Vector3d(0.0, -9.8 / 10.0, 0.0);
+    const double alpha = 1.0;
+    const double sound_speed = 20.0;
+    const double epsilon = 0.01;
+    const double gamma = 7.0;
+    const double kappa = 0.2;
+    const double delta_t = 0.0003;
+    const int max_num_particles_per_cell = 200;
+    const int particle_max_num_neighbors = 200;
+    const double pi = 3.14159265358979323846;
+
     int num_particles;
     Eigen::MatrixXd positions;
     Eigen::MatrixXd velocities;
@@ -36,24 +49,16 @@ class Particles {
     int n_cells_y;
     int n_cells_z;
 
-    const double init_density = 1000.0;
-    const Eigen::Vector3d gravity = Eigen::Vector3d(0.0, -9.8 / 100.0, 0.0);
-    const double alpha = 1.0;
-    const double sound_speed = 20.0;
-    const double epsilon = 0.01;
-    const double gamma = 7.0;
-    const double kappa = 0.2;
-    const double delta_t = 0.0003;
-    const int max_num_particles_per_cell = 200;
-    const int particle_max_num_neighbors = 200;
-    const double pi = 3.14159265358979323846;
+    double x_lower, x_upper, y_lower, z_lower, z_upper;
 
-    int x_lower, x_upper, y_lower, z_lower, z_upper;
+    // debug
+    int num_flattened_cells;
 
     Particles(std::vector<double> _positions, std::vector<int> _is_wall,
-     double radius, int x_lower = 0.0, int x_upper = 1.0, int y_lower = 0.0): 
-        num_particles(int(_positions.size()/3)), radius(radius), volume(pi * radius * radius),
+     double radius, double x_lower = 0.0, double x_upper = 0.5, double y_lower = 0.0): 
+        num_particles(int(_positions.size()/3)), radius(radius),
         x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), z_lower(x_lower), z_upper(x_upper) {
+            volume = 4.0 / 3 * pi * radius * radius * radius;
             positions.resize(num_particles, 3);
             velocities.resize(num_particles, 3);
             densities.resize(num_particles);
@@ -64,13 +69,14 @@ class Particles {
             new_densities.resize(num_particles);      
 
             h_smooth_length = radius * 1.3;
-            n_cells_x = ceil(1.0 / (2.0 * h_smooth_length));
-            n_cells_y = n_cells_x;
-            n_cells_z = n_cells_x;
+            n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
+            n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
+            n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
 
-            std::cout << (n_cells_x * n_cells_y * n_cells_z) << std::endl;
-            cells.resize(n_cells_x * n_cells_y * n_cells_z, max_num_particles_per_cell);
-            num_particles_per_cell.resize(n_cells_x * n_cells_y * n_cells_z);
+            num_flattened_cells = n_cells_x * n_cells_y * n_cells_z;
+            std::cout << num_flattened_cells << std::endl;
+            cells.resize(num_flattened_cells, max_num_particles_per_cell);
+            num_particles_per_cell.resize(num_flattened_cells);
             particle_neighbors.resize(num_particles, particle_max_num_neighbors);
             particle_num_neighbors.resize(num_particles);
 
@@ -99,9 +105,12 @@ class Particles {
     }
 
     Eigen::Vector3i get_grid(Eigen::Vector3d position) {
-        int grid_x = std::max(std::min(int(position(0) * n_cells_x), n_cells_x), 0);
-        int grid_y = std::max(std::min(int(position(1) * n_cells_y), n_cells_y), 0);
-        int grid_z = std::max(std::min(int(position(2) * n_cells_z), n_cells_z), 0);
+        double normalized_x = position(0) /  x_upper;
+        double normalized_y = position(1);
+        double normalized_z = position(2) / z_upper;
+        int grid_x = std::max(std::min(int(normalized_x * n_cells_x), n_cells_x-1), 0);
+        int grid_y = std::max(std::min(int(normalized_y * n_cells_y), n_cells_y-1), 0);
+        int grid_z = std::max(std::min(int(normalized_z * n_cells_z), n_cells_z-1), 0);
         Eigen::Vector3i grid;
         grid << grid_x, grid_y, grid_z;
         return grid;
@@ -112,7 +121,9 @@ class Particles {
             Eigen::Vector3i grid = get_grid(positions.row(pid));
             int grid_x = grid(0); int grid_y = grid(1); int grid_z = grid(2);
             int cid = grid_x * (n_cells_y * n_cells_z) + grid_y * n_cells_z + grid_z;
-            int pid_cell = num_particles_per_cell.at(cid).fetch_add(1);
+            assert(cid < num_flattened_cells );
+            assert(cid >=0 );
+            int pid_cell = num_particles_per_cell[cid].fetch_add(1);
             if(pid_cell < max_num_particles_per_cell) {
                 cells(cid, pid_cell) = pid;
             }
@@ -137,10 +148,11 @@ class Particles {
                         if(is_in_range(tmp_x, 0, n_cells_x) && 
                         is_in_range(tmp_y, 0, n_cells_y) && is_in_range(tmp_z, 0, n_cells_z)) {
                             int cid = tmp_x * (n_cells_y * n_cells_z) + tmp_y * n_cells_z + tmp_z;
-                            for(int i = 0; i < num_particles_per_cell[cid]; i++) {
+                            for(int i = 0; i < num_particles_per_cell[cid] && i < max_num_particles_per_cell; i++) {
                                 int neighbor_id = cells(cid, i);
                                 if(neighbor_id != pid && 
-                                    (positions.row(pid) - positions.row(neighbor_id)).norm() < h_smooth_length * 2.0) {
+                                    (positions.row(pid) - positions.row(neighbor_id)).norm() < h_smooth_length * 2.0
+                                    && particle_num_neighbors[pid] < particle_max_num_neighbors) {
                                     particle_neighbors(pid, particle_num_neighbors[pid]++) = neighbor_id;
                                 }
                             }
@@ -279,11 +291,16 @@ class Particles {
             new_densities[pid] = densities[pid] + delta_t * ddensity;
         });
         if(isnan(new_positions.sum())) {
+            cout << "has nan: \n";
+            cout << new_positions << endl;
             abort();
         }
     }
 
     void collide_with_lower(int pid) {
+        // cout << "x_lower " << x_lower << endl;
+        // cout << "y_lower " << y_lower << endl;
+        // cout << "z_lower " << z_lower << endl;
         if(positions.row(pid).x() < x_lower) {
             if (velocities.row(pid).x() < 0.0) {
                 velocities.row(pid).x()  += -1.5  * velocities.row(pid).x();

@@ -39,8 +39,8 @@ int main()
     
     vector<double> _positions;
     vector<int> _is_wall;
-    setup_ball_positions(_positions, _is_wall, 0.08);
     double radius = 3.0 / 400;
+    setup_ball_positions(_positions, _is_wall, 2 * radius);
     Particles particles(_positions, _is_wall, radius);
     draw_positions.resizeLike(particles.positions);
     // cout << "hello" << endl;
@@ -50,13 +50,14 @@ int main()
 
     viewer.callback_post_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
         std::unique_lock<std::mutex> lk(cv_m);
-        if(cv.wait_for(lk, 200ms, [] (){return true;})) {
-            viewer.data().set_points(particles.positions, Eigen::RowVector3d(1.0,1.0,1.0));
-            viewer.data().point_size = 12;
+        if(cv.wait_for(lk, 20ms, [] (){return true;})) {
+            viewer.data().set_points(draw_positions, Eigen::RowVector3d(1.0,1.0,1.0));
+            viewer.data().point_size = 5;
         }
         lk.unlock();
         return true;
     };
+    viewer.core().is_animating = true;
     viewer.launch();
     worker.join();
 }
