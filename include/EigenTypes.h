@@ -1,6 +1,7 @@
 #ifndef EIGENTYPES_H
 #define EIGENTYPES_H
 
+#include<CompileOptions.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 

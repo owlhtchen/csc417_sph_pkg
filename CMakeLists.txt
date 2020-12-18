@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 
 project(fluid417)
 
-add_executable(main src/main.cpp)
+add_executable(main src/main.cpp src/Particles.cpp)
 
 target_include_directories(main PUBLIC include)
 
@@ -15,3 +15,5 @@ find_package(libigl CONFIG REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 
 target_link_libraries(main igl::core igl::common igl::opengl igl::opengl_glfw TBB::tbb)
+
+# target_compile_options(main PRIVATE /WX)

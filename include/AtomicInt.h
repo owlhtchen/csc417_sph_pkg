@@ -1,3 +1,7 @@
+#ifndef ATOMICINT_H
+#define ATOMICINT_H
+
+#include<CompileOptions.h>
 #include <atomic>
 
 class AtomicInt: public std::atomic<int> {
@@ -14,3 +18,5 @@ class AtomicInt: public std::atomic<int> {
         return *this;
     }
 };
+
+#endif 

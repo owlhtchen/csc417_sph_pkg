@@ -1,3 +1,4 @@
+#include <CompileOptions.h>
 #include <igl/cotmatrix.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>

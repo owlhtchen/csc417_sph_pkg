@@ -1,3 +1,5 @@
+#ifndef SETUP_H
+#define SETUP_H
 
 #include<vector>
 
@@ -17,3 +19,5 @@ void setup_ball_positions(std::vector<double>& positions, std::vector<int> & is_
         }
     }
 }
+
+#endif
