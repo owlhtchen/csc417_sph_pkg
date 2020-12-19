@@ -48,7 +48,7 @@ int main()
     vector<double> _positions;
     vector<int> _is_wall;
     double radius = 3.0 / 400;
-    const double c = 0.0;
+    const double c = 0.5;
 
     setup_ball_positions(_positions, _is_wall, 2 * radius);
     Particles particles(_positions, _is_wall, radius);
@@ -76,12 +76,15 @@ int main()
             particles.get_X_phi(all_X, all_phi, c);
             MatrixXd V; MatrixXi F;
             igl::copyleft::marching_cubes(all_phi, all_X, 
-                particles.n_cells_x, particles.n_cells_y, particles.n_cells_z, V, F);
+                particles.grid_per_dim, particles.grid_per_dim, particles.grid_per_dim, V, F);
             viewer.core().is_animating = false;
             viewer.data().set_mesh(V, F);
+            cout << "grid_per_dim: " << particles.grid_per_dim << endl;
             cout << "phi, X: " << all_phi.size() << ", " << all_X.size() << endl;
+            cout << "phi, X: " << all_phi.mean() << ", " << all_X.mean() << endl;
             cout << "V, F " << V.size() << ", " << F.size() << endl;
         } else if (key == 'S' || key == 's') {
+            viewer.data().clear();
              viewer.core().is_animating = true;
             updating = true;
         }

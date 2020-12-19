@@ -18,9 +18,9 @@ using std::cout; using std::endl;
 // class Particles {
 
     Particles::Particles(std::vector<double> _positions, std::vector<int> _is_wall,
-     double radius, double x_lower, double x_upper, double y_lower): 
+     double radius, double x_lower, double x_upper, double y_lower, int grid_per_dim): 
         num_particles(int(_positions.size()/3)), radius(radius),
-        x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), z_lower(x_lower), z_upper(x_upper) {
+        x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), grid_per_dim(grid_per_dim) {
             volume = 4.0 / 3 * pi * radius * radius * radius;
             positions.resize(num_particles, 3);
             velocities.resize(num_particles, 3);
@@ -36,6 +36,9 @@ using std::cout; using std::endl;
             n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
             n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
             n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
+
+            z_lower = x_lower;
+            z_upper = x_upper;
 
             num_flattened_cells = n_cells_x * n_cells_y * n_cells_z;
             std::cout << num_flattened_cells << std::endl;
@@ -361,7 +364,7 @@ Eigen::Matrix3d Particles::get_G(int pid) {
     using Eigen::JacobiSVD; using Eigen::Matrix3d; using Eigen::Vector3d;
     using Eigen::ComputeFullV; using Eigen::ComputeFullU;
     Matrix3d C = get_convariance_matrix(pid);
-    JacobiSVD<Matrix3d> svd(C, ComputeFullU || ComputeFullV );
+    JacobiSVD<Matrix3d> svd(C, Eigen::ComputeFullV | Eigen::ComputeFullU );
     Vector3d sigma = svd.singularValues();
     Matrix3d R = svd.matrixU();
     
@@ -396,6 +399,23 @@ double Particles::get_w(int pid) {
     return scale * G.norm() * cubicKernel((G * r).norm(), h_smooth_length);
 }
 
+double Particles::get_iso_w(double r, double h) {
+    auto W_k = 10. / (7. * pi);
+    auto kernel_P = [&](double r) {
+        auto q = r;
+        auto res = 0.0;
+        if (q <= 1.0)
+            res = (1 - 1.5 * q * q + 0.75 * q * q * q);
+        else if (q < 2.0) {
+            auto two_m_q = 2 - q;
+            res = 0.25 * two_m_q * two_m_q * two_m_q;
+        }
+        return res;
+    };  
+    const double scale = 1.0;
+    return scale / pow(h, 3) * kernel_P(r / h);
+}
+
 double Particles::get_phi(Eigen::Vector3d position) {
     using Eigen::Matrix3d; using Eigen::Vector3d;
 
@@ -413,10 +433,12 @@ double Particles::get_phi(Eigen::Vector3d position) {
                     int cid = tmp_x * (n_cells_y * n_cells_z) + tmp_y * n_cells_z + tmp_z;
                     for(int i = 0; i < num_particles_per_cell[cid] && i < max_num_particles_per_cell; i++) {
                         int pid = cells(cid, i);
-                        Vector3d diff = positions.row(pid) - position.transpose();
-                        if(diff.norm() < h_smooth_length * 2.0) {
-                            phi += volume * get_w(pid);
-                        }
+                        // Vector3d diff = positions.row(pid) - position.transpose();
+                        // if(diff.norm() < h_smooth_length * 2.0) {
+                            // phi += volume * get_w(pid);
+                            double r = (position.transpose() - positions.row(pid)).norm();
+                            phi += volume * get_iso_w(r, h_smooth_length);
+                        // }
                     }
                 }
                 
@@ -429,16 +451,27 @@ double Particles::get_phi(Eigen::Vector3d position) {
 
 void Particles::get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, double c) {
     using Eigen::Vector3d; using Eigen::VectorXd; using Eigen::MatrixXd;
-    all_X.resize(num_flattened_cells, 3);
-    all_phi.resize(num_flattened_cells);
+    
+    all_X.resize(grid_per_dim * grid_per_dim * grid_per_dim, 3);
+    all_phi.resize(grid_per_dim * grid_per_dim * grid_per_dim);
 
-    for(int x = 0; x < n_cells_x; x++) {
-        for(int y = 0; y < n_cells_y; y++) {
-            for(int z = 0; z < n_cells_z; z++) {
-                int id = x * (n_cells_y * n_cells_z) + y * n_cells_z + z;
-                all_X.row(id) = cell_width * Vector3d(x+0.5, y+0.5, z+0.5);
+    double x_gap = (x_upper - x_lower) * 1.0 / grid_per_dim;
+    double y_gap = (1.0 - y_lower) / grid_per_dim;
+    double z_gap = (z_upper - z_lower) * 1.0 / grid_per_dim; 
+    parallel_for(0, grid_per_dim, [&](int x_i) {
+        for(int y_i = 0; y_i < grid_per_dim; y_i++) {
+            for(int z_i = 0; z_i < grid_per_dim; z_i++) {
+                double x = x_i * x_gap;
+                double y = y_i * y_gap;
+                double z = z_i * z_gap;
+                int id = x_i + y_i * grid_per_dim + z_i * grid_per_dim * grid_per_dim;
+                all_X.row(id) =  Vector3d(x, y, z);
                 all_phi(id) = get_phi(all_X.row(id)) - c;
+                if(isnan(all_phi(id))) {
+                    cout << "nan: " << id << ", " << all_phi(id) << endl;
+                }
             }
         }
-    }
+    });
+    // cout << "all_X\n" << all_X << endl;
 }

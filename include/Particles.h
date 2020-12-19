@@ -49,12 +49,15 @@ class Particles {
 
     double x_lower, x_upper, y_lower, z_lower, z_upper;
 
+    int grid_per_dim;
+
     // debug
     int num_flattened_cells;
     double cell_width;
 
     Particles(std::vector<double> _positions, std::vector<int> _is_wall,
-     double radius, double x_lower = 0.0, double x_upper = 0.5, double y_lower = 0.0);
+     double radius, double x_lower = 0.0, double x_upper = 0.5, double y_lower = 0.0,
+     int grid_per_dim = 200);
 
     void reset_cells_neighbors() ;
 
@@ -107,6 +110,8 @@ class Particles {
     double get_w(int pid);
 
     void get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, double c);
+
+    double get_iso_w(double r, double h);
 };
 
 #endif
