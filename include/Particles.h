@@ -56,7 +56,7 @@ class Particles {
     double cell_width;
 
     Particles(std::vector<double> _positions, std::vector<int> _is_wall,
-     double radius, double x_lower = 0.0, double x_upper = 0.5, double y_lower = 0.0,
+     double radius, double x_lower = 0.0, double x_upper = 0.3, double y_lower = 0.0,
      int grid_per_dim = 200);
 
     void reset_cells_neighbors() ;
