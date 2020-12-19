@@ -32,6 +32,7 @@ using std::cout; using std::endl;
             new_densities.resize(num_particles);      
 
             h_smooth_length = radius * 1.3;
+            cell_width = 2.0 * h_smooth_length;
             n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
             n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
             n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
@@ -224,7 +225,7 @@ using std::cout; using std::endl;
         Eigen::Vector3d dv_dt = Eigen::Vector3d(0.0, 0.0, 0.0);
         dv_dt += dvelocity_dt_momentum(pid);
         dv_dt += dvelocity_dt_viscocity(pid);
-        // dv_dt += dvelocity_dt_tension(pid);
+        dv_dt += dvelocity_dt_tension(pid);
         return dv_dt;
     }
 
@@ -315,4 +316,129 @@ using std::cout; using std::endl;
     void Particles::update() {
         update1();
         update2();
-    }       
+    } 
+
+double Particles::get_w_ij(int pid, int neighbor_id){
+    double norm_ij = (positions.row(pid) - positions.row(neighbor_id)).norm();
+    double r_i = 2 * h_smooth_length;
+    double w_ij = 0;
+    if(norm_ij < r_i) {
+        double tmp = norm_ij / r_i;
+        w_ij = 1 - tmp * tmp * tmp;
+    }
+    return w_ij;
+}    
+
+Eigen::Vector3d Particles::get_weighted_mean(int pid) {
+    Eigen::Vector3d x_i_w = Eigen::Vector3d(0.0, 0.0, 0.0);
+    double denom = 0.0;
+    for(int i = 0; i < particle_num_neighbors[pid]; i++) {
+        int neighbor_id = particle_neighbors(pid, i);
+        double w_ij = get_w_ij(pid, neighbor_id);
+        x_i_w +=  w_ij * positions.row(neighbor_id);
+        denom += w_ij;
+    }
+    x_i_w = x_i_w / denom;
+    return x_i_w;
+}
+
+Eigen::Matrix3d Particles::get_convariance_matrix(int pid) {
+    Eigen::Matrix3d C = Eigen::Matrix3d::Zero();
+    double denom = 0.0;
+    for(int i = 0; i < particle_num_neighbors[pid]; i++) {
+        int neighbor_id = particle_neighbors(pid, i);
+        double w_ij = get_w_ij(pid, neighbor_id);
+        Eigen::Vector3d x_i_w = get_weighted_mean(pid);
+        Eigen::Vector3d v_tmp = positions.row(neighbor_id).transpose() - x_i_w;
+        C += w_ij * v_tmp * v_tmp.transpose();
+        denom += w_ij;
+    }
+    C = C / denom;
+    return C;
+}
+
+Eigen::Matrix3d Particles::get_G(int pid) {
+    using Eigen::JacobiSVD; using Eigen::Matrix3d; using Eigen::Vector3d;
+    using Eigen::ComputeFullV; using Eigen::ComputeFullU;
+    Matrix3d C = get_convariance_matrix(pid);
+    JacobiSVD<Matrix3d> svd(C, ComputeFullU || ComputeFullV );
+    Vector3d sigma = svd.singularValues();
+    Matrix3d R = svd.matrixU();
+    
+    int k_s = 1400;
+    int k_r = 4;
+    double k_n = 0.5;
+    int N_epsilon = 25;
+    int N = particle_num_neighbors(pid);
+    Matrix3d sigma_tilde = Matrix3d::Zero();
+    if(N > N_epsilon) {
+        sigma_tilde = k_n * Matrix3d::Identity();
+    } else {
+        sigma_tilde(0, 0) = k_s * sigma(0);
+        for(int k =1; k < sigma.size(); k++) {
+            sigma_tilde(k, k) = k_s * fmax(sigma(k), sigma(0)/k_r);
+        }
+    }
+    
+    Matrix3d G = 1.0 / h_smooth_length * R * sigma_tilde.inverse() * R.transpose();
+    return G;
+}
+
+double Particles::get_w(int pid) {
+    using Eigen::Matrix3d; using Eigen::Vector3d;
+    const double lambda = 0.9;
+    // TODO: scale adjust
+    const double scale = 1.0;
+    Matrix3d G = get_G(pid);
+    Vector3d x_bar_i = (1.0 - lambda) * positions.row(pid).transpose() + get_weighted_mean(pid);
+    Vector3d r = positions.row(pid).transpose() - x_bar_i;
+    // TODO: cubicKernel as P ? h_smooth_length as 2nd param?
+    return scale * G.norm() * cubicKernel((G * r).norm(), h_smooth_length);
+}
+
+double Particles::get_phi(Eigen::Vector3d position) {
+    using Eigen::Matrix3d; using Eigen::Vector3d;
+
+    double phi = 0.0;
+    auto grid = get_grid(position);
+    int grid_x = grid(0); int grid_y = grid(1); int grid_z = grid(2);
+    for(int x_range = -1; x_range <= 1; x_range++){
+        for(int y_range = -1; y_range <= 1; y_range++) {
+            for(int z_range = -1; z_range <= 1; z_range++) {
+                int tmp_x = grid_x + x_range;
+                int tmp_y = grid_y + y_range;
+                int tmp_z = grid_z + z_range;
+                if(is_in_range(tmp_x, 0, n_cells_x) && 
+                is_in_range(tmp_y, 0, n_cells_y) && is_in_range(tmp_z, 0, n_cells_z)) {
+                    int cid = tmp_x * (n_cells_y * n_cells_z) + tmp_y * n_cells_z + tmp_z;
+                    for(int i = 0; i < num_particles_per_cell[cid] && i < max_num_particles_per_cell; i++) {
+                        int pid = cells(cid, i);
+                        Vector3d diff = positions.row(pid) - position.transpose();
+                        if(diff.norm() < h_smooth_length * 2.0) {
+                            phi += volume * get_w(pid);
+                        }
+                    }
+                }
+                
+            }
+        }
+    } 
+    return phi;   
+}
+
+
+void Particles::get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, double c) {
+    using Eigen::Vector3d; using Eigen::VectorXd; using Eigen::MatrixXd;
+    all_X.resize(num_flattened_cells, 3);
+    all_phi.resize(num_flattened_cells);
+
+    for(int x = 0; x < n_cells_x; x++) {
+        for(int y = 0; y < n_cells_y; y++) {
+            for(int z = 0; z < n_cells_z; z++) {
+                int id = x * (n_cells_y * n_cells_z) + y * n_cells_z + z;
+                all_X.row(id) = cell_width * Vector3d(x+0.5, y+0.5, z+0.5);
+                all_phi(id) = get_phi(all_X.row(id)) - c;
+            }
+        }
+    }
+}

@@ -19,7 +19,7 @@ class Particles {
     const double sound_speed = 20.0;
     const double epsilon = 0.01;
     const double gamma = 7.0;
-    const double kappa = 0.2;
+    const double kappa = 0.055;
     const double delta_t = 0.0003;
     const int max_num_particles_per_cell = 200;
     const int particle_max_num_neighbors = 200;
@@ -51,6 +51,7 @@ class Particles {
 
     // debug
     int num_flattened_cells;
+    double cell_width;
 
     Particles(std::vector<double> _positions, std::vector<int> _is_wall,
      double radius, double x_lower = 0.0, double x_upper = 0.5, double y_lower = 0.0);
@@ -92,6 +93,20 @@ class Particles {
     void update2();
 
     void update();  
+
+    double get_w_ij(int pid, int neighbor_id);
+
+    Eigen::Vector3d get_weighted_mean(int pid);
+
+    Eigen::Matrix3d get_convariance_matrix(int pid);
+
+    Eigen::Matrix3d get_G(int pid);
+
+    double get_phi(Eigen::Vector3d position);
+
+    double get_w(int pid);
+
+    void get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, double c);
 };
 
 #endif
