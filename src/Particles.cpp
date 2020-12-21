@@ -33,12 +33,13 @@ using std::cout; using std::endl;
 
             h_smooth_length = radius * 1.3;
             cell_width = 2.0 * h_smooth_length;
-            n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
-            n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
-            n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
 
             z_lower = x_lower;
             z_upper = x_upper;
+
+            n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
+            n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
+            n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
 
             num_flattened_cells = n_cells_x * n_cells_y * n_cells_z;
             std::cout << num_flattened_cells << std::endl;
@@ -373,7 +374,7 @@ Eigen::Matrix3d Particles::get_G(int pid) {
     using Eigen::JacobiSVD; using Eigen::Matrix3d; using Eigen::Vector3d;
     using Eigen::ComputeFullV; using Eigen::ComputeFullU;
     
-    return 1.0 / h_smooth_length * Matrix3d::Identity();
+    // return 1.0 / h_smooth_length * Matrix3d::Identity();
     //
     Matrix3d C = get_convariance_matrix(pid);
     JacobiSVD<Matrix3d> svd(C, Eigen::ComputeFullV | Eigen::ComputeFullU );
