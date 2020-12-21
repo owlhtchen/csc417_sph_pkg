@@ -5,7 +5,7 @@
 
 void setup_ball_positions(std::vector<double>& positions, std::vector<int> & is_wall, double step, 
     // double xBound=0.125, double yBound=0.3, double zBound=0.125) {
-    double xBound=0.25, double yBound=0.5, double zBound=0.25) {
+    double xBound=0.16, double yBound=0.6, double zBound=0.16) {
     // x, y, z: 0.0 to 1.0 for simulation canvas
     positions.clear();
     double start_offset = 0.000;

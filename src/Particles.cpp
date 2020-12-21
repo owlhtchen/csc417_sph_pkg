@@ -469,8 +469,9 @@ double Particles::get_phi(Eigen::Vector3d position) {
                         // if(diff.norm() < h_smooth_length * 2.0) {
                             // phi += volume * get_w(pid);
                             double r = (position.transpose() - positions.row(pid)).norm();
-                            // phi += volume * get_iso_w(r, h_smooth_length);
-                            double w = get_w(position, pid, h_smooth_length);
+                            double w = get_iso_w(r, h_smooth_length);
+                            // TODO: anisotrophic not done
+                            // double w = get_w(position, pid, h_smooth_length);
                             // if(isnan(w)) {
                             //     abort();
                             // }
