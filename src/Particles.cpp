@@ -357,6 +357,9 @@ Eigen::Vector3d Particles::get_weighted_mean(int pid) {
 
 Eigen::Matrix3d Particles::get_convariance_matrix(int pid) {
     Eigen::Matrix3d C = Eigen::Matrix3d::Zero();
+    if(particle_num_neighbors[pid] == 0) {
+        return C;
+    }
     double denom = 0.0;
     for(int i = 0; i < particle_num_neighbors[pid]; i++) {
         int neighbor_id = particle_neighbors(pid, i);
@@ -387,7 +390,7 @@ Eigen::Matrix3d Particles::get_G(int pid) {
     int N_epsilon = 25;
     int N = particle_num_neighbors(pid);
     Matrix3d sigma_tilde = Matrix3d::Zero();
-    if(N > N_epsilon) {
+    if(N < N_epsilon) {
         sigma_tilde = k_n * Matrix3d::Identity();
     } else {
         sigma_tilde(0, 0) = k_s * sigma(0);

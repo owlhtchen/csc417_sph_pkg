@@ -52,12 +52,13 @@ int main()
 
     setup_ball_positions(_positions, _is_wall, 2 * radius);
     Particles particles(_positions, _is_wall, radius);
+    cout << "particles.positions: " << particles.positions.size() << endl;
     draw_positions.resizeLike(particles.positions);
     // cout << "hello" << endl;
     // cout << "??? " << _positions.size() << endl;
 
     std::thread worker(simulation, std::ref(particles));
-    updating = true;
+    updating = false;
 
     viewer.callback_post_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
         std::unique_lock<std::mutex> lk(cv_m);
@@ -87,10 +88,13 @@ int main()
             viewer.data().clear();
              viewer.core().is_animating = true;
             updating = true;
+        } else if(key == 'N' || key == 'n') {
+            updating = true;
+            viewer.core().is_animating = true;
         }
         return false;
     };
-    viewer.core().is_animating = true;
+    viewer.core().is_animating = false;
     viewer.launch();
     worker.join();
 }

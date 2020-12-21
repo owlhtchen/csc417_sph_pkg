@@ -57,7 +57,8 @@ class Particles {
     double cell_width;
 
     Particles(std::vector<double> _positions, std::vector<int> _is_wall,
-     double radius, double x_lower = 0.0, double x_upper = 0.3, double y_lower = 0.0,
+    //  double radius, double x_lower = 0.0, double x_upper = 0.3, double y_lower = 0.0,
+     double radius, double x_lower = 0.0, double x_upper = 0., double y_lower = 0.0,
      int grid_per_dim = 200);
 
     void reset_cells_neighbors() ;
@@ -83,6 +84,8 @@ class Particles {
     Eigen::Vector3d dvelocity_dt_viscocity(int pid);
 
     Eigen::Vector3d dvelocity_dt_tension(int pid);
+
+    Eigen::Vector3d dvelocity_dt_tension_2(int pid);
 
     Eigen::Vector3d dvelocity_dt(int pid);
 
