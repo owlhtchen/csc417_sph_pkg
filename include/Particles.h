@@ -15,11 +15,12 @@ class Particles {
     public:
     const double init_density = 1000.0;
     const Eigen::Vector3d gravity = Eigen::Vector3d(0.0, -9.8 / 10.0, 0.0);
-    const double alpha = 1.0;
-    const double sound_speed = 20.0;
+    const double alpha = 1.0;  // ?
+    const double sound_speed = 20.0;   // ?
     const double epsilon = 0.01;
     const double gamma = 7.0;
     const double kappa = 0.055;
+    // const double kappa = 1.0;  // large
     const double delta_t = 0.0003;
     const int max_num_particles_per_cell = 200;
     const int particle_max_num_neighbors = 200;
@@ -107,7 +108,7 @@ class Particles {
 
     double get_phi(Eigen::Vector3d position);
 
-    double get_w(int pid);
+    double get_w(Eigen::Vector3d x, int pid, double h);
 
     void get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, double c);
 

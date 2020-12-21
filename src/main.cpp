@@ -48,7 +48,7 @@ int main()
     vector<double> _positions;
     vector<int> _is_wall;
     double radius = 3.0 / 400;
-    const double c = 0.5;
+    const double c = 0.7;
 
     setup_ball_positions(_positions, _is_wall, 2 * radius);
     Particles particles(_positions, _is_wall, radius);

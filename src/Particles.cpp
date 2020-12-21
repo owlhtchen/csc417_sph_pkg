@@ -329,10 +329,16 @@ double Particles::get_w_ij(int pid, int neighbor_id){
         double tmp = norm_ij / r_i;
         w_ij = 1 - tmp * tmp * tmp;
     }
+    if(isnan(w_ij)) {
+        abort();
+    }
     return w_ij;
 }    
 
 Eigen::Vector3d Particles::get_weighted_mean(int pid) {
+    if(particle_num_neighbors[pid] ==0) {
+        return positions.row(pid);
+    }
     Eigen::Vector3d x_i_w = Eigen::Vector3d(0.0, 0.0, 0.0);
     double denom = 0.0;
     for(int i = 0; i < particle_num_neighbors[pid]; i++) {
@@ -340,6 +346,9 @@ Eigen::Vector3d Particles::get_weighted_mean(int pid) {
         double w_ij = get_w_ij(pid, neighbor_id);
         x_i_w +=  w_ij * positions.row(neighbor_id);
         denom += w_ij;
+    }
+    if(denom == 0) {
+        abort();
     }
     x_i_w = x_i_w / denom;
     return x_i_w;
@@ -363,6 +372,9 @@ Eigen::Matrix3d Particles::get_convariance_matrix(int pid) {
 Eigen::Matrix3d Particles::get_G(int pid) {
     using Eigen::JacobiSVD; using Eigen::Matrix3d; using Eigen::Vector3d;
     using Eigen::ComputeFullV; using Eigen::ComputeFullU;
+    
+    return 1.0 / h_smooth_length * Matrix3d::Identity();
+    //
     Matrix3d C = get_convariance_matrix(pid);
     JacobiSVD<Matrix3d> svd(C, Eigen::ComputeFullV | Eigen::ComputeFullU );
     Vector3d sigma = svd.singularValues();
@@ -387,21 +399,11 @@ Eigen::Matrix3d Particles::get_G(int pid) {
     return G;
 }
 
-double Particles::get_w(int pid) {
+double Particles::get_w(Eigen::Vector3d x, int pid, double h) {
     using Eigen::Matrix3d; using Eigen::Vector3d;
     const double lambda = 0.9;
     // TODO: scale adjust
-    const double scale = 1.0;
-    Matrix3d G = get_G(pid);
-    Vector3d x_bar_i = (1.0 - lambda) * positions.row(pid).transpose() + get_weighted_mean(pid);
-    Vector3d r = positions.row(pid).transpose() - x_bar_i;
-    // TODO: cubicKernel as P ? h_smooth_length as 2nd param?
-    return scale * G.norm() * cubicKernel((G * r).norm(), h_smooth_length);
-}
-
-double Particles::get_iso_w(double r, double h) {
-    auto W_k = 10. / (7. * pi);
-    auto kernel_P = [&](double r) {
+    auto P = [&](double r) {
         auto q = r;
         auto res = 0.0;
         if (q <= 1.0)
@@ -412,8 +414,34 @@ double Particles::get_iso_w(double r, double h) {
         }
         return res;
     };  
-    const double scale = 1.0;
-    return scale / pow(h, 3) * kernel_P(r / h);
+    const double scale = 10. / (7. * pi);
+    Matrix3d G = get_G(pid);
+    if(isnan(G.sum())) {
+        abort();
+    }    
+    Vector3d x_bar_i = (1.0 - lambda) * positions.row(pid).transpose() + lambda * get_weighted_mean(pid);
+    if(isnan(x_bar_i.sum())) {
+        abort();
+    }       
+    Vector3d r = x - x_bar_i;
+    // TODO: cubicKernel as P ? h_smooth_length as 2nd param?
+    return scale * G.norm() * P((G * r).norm()) / h / h;
+}
+
+double Particles::get_iso_w(double r, double h) {
+    auto P = [&](double r) {
+        auto q = r;
+        auto res = 0.0;
+        if (q <= 1.0)
+            res = (1 - 1.5 * q * q + 0.75 * q * q * q);
+        else if (q < 2.0) {
+            auto two_m_q = 2 - q;
+            res = 0.25 * two_m_q * two_m_q * two_m_q;
+        }
+        return res;
+    };  
+    const double scale = 10. / (7. * pi);
+    return scale / pow(h, 3) * P(r / h);
 }
 
 double Particles::get_phi(Eigen::Vector3d position) {
@@ -437,7 +465,12 @@ double Particles::get_phi(Eigen::Vector3d position) {
                         // if(diff.norm() < h_smooth_length * 2.0) {
                             // phi += volume * get_w(pid);
                             double r = (position.transpose() - positions.row(pid)).norm();
-                            phi += volume * get_iso_w(r, h_smooth_length);
+                            // phi += volume * get_iso_w(r, h_smooth_length);
+                            double w = get_w(position, pid, h_smooth_length);
+                            // if(isnan(w)) {
+                            //     abort();
+                            // }
+                            phi += volume * w;
                         // }
                     }
                 }
@@ -468,7 +501,8 @@ void Particles::get_X_phi(Eigen::MatrixXd & all_X, Eigen::VectorXd& all_phi, dou
                 all_X.row(id) =  Vector3d(x, y, z);
                 all_phi(id) = get_phi(all_X.row(id)) - c;
                 if(isnan(all_phi(id))) {
-                    cout << "nan: " << id << ", " << all_phi(id) << endl;
+                    abort();
+                    // cout << "nan: " << id << ", " << all_phi(id) << endl;
                 }
             }
         }
