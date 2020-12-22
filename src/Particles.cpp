@@ -18,7 +18,60 @@ using std::cout; using std::endl;
 // class Particles {
 
     Particles::Particles(
-        std::vector<double> _positions, std::vector<int> _is_wall, std::vector<double> _colors,
+        std::vector<double> _positions, std::vector<int> _is_wall, 
+        std::vector<double> _colors, std::vector<double> _velocities,
+     double radius, double x_lower, double x_upper, double y_lower, int grid_per_dim): 
+        num_particles(int(_positions.size()/3)), radius(radius),
+        x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), grid_per_dim(grid_per_dim) {
+            volume = 4.0 / 3 * pi * radius * radius * radius;
+            positions.resize(num_particles, 3);
+            velocities.resize(num_particles, 3);
+            densities.resize(num_particles);
+            is_wall.resize(num_particles);
+            colors.resize(num_particles, 3);
+
+            new_positions.resize(num_particles, 3);
+            new_velocities.resize(num_particles, 3);
+            new_densities.resize(num_particles);      
+
+            h_smooth_length = radius * 1.3;
+            cell_width = 2.0 * h_smooth_length;
+
+            z_lower = x_lower;
+            z_upper = x_upper;
+
+            n_cells_x = ceil(x_upper / (2.0 * h_smooth_length));
+            n_cells_y = ceil(1.0 / (2.0 * h_smooth_length));
+            n_cells_z = ceil(z_upper / (2.0 * h_smooth_length));
+
+            num_flattened_cells = n_cells_x * n_cells_y * n_cells_z;
+            std::cout << num_flattened_cells << std::endl;
+            cells.resize(num_flattened_cells, max_num_particles_per_cell);
+            num_particles_per_cell.resize(num_flattened_cells);
+            particle_neighbors.resize(num_particles, particle_max_num_neighbors);
+            particle_num_neighbors.resize(num_particles);
+
+            // positions init
+            for(int particleId = 0; particleId < num_particles; particleId++) {
+                positions(particleId, 0) = _positions[particleId*3];
+                positions(particleId, 1) = _positions[particleId*3+1];
+                positions(particleId, 2) = _positions[particleId*3+2];
+                colors(particleId, 0) = _colors[particleId*3];
+                colors(particleId, 1) = _colors[particleId*3+1];
+                colors(particleId, 2) = _colors[particleId*3+2];                
+                velocities(particleId, 0) = _velocities[particleId*3];
+                velocities(particleId, 1) = _velocities[particleId*3+1];
+                velocities(particleId, 2) = _velocities[particleId*3+2];
+                densities(particleId) = init_density;
+                is_wall[particleId] = _is_wall[particleId];
+            }
+
+            reset_cells_neighbors();
+    }
+
+    Particles::Particles(
+        std::vector<double> _positions, std::vector<int> _is_wall, 
+        std::vector<double> _colors,
      double radius, double x_lower, double x_upper, double y_lower, int grid_per_dim): 
         num_particles(int(_positions.size()/3)), radius(radius),
         x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), grid_per_dim(grid_per_dim) {

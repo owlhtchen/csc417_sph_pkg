@@ -48,11 +48,17 @@ int main()
     vector<double> _positions;
     vector<int> _is_wall;
     std::vector<double>  _colors;
+    std::vector<double>  _velocities;
     double radius = 3.0 / 400;
     const double c = 0.7;
+    
+    // no velocities
+    // setup_ball_positions(_positions, _is_wall, _colors, 2 * radius);
+    // Particles particles(_positions, _is_wall, _colors, radius);
 
-    setup_ball_positions(_positions, _is_wall, _colors, 2 * radius);
-    Particles particles(_positions, _is_wall, _colors, radius);
+    // velocities
+    setup_ball_positions(_positions, _is_wall, _colors, _velocities, 2 * radius);
+    Particles particles(_positions, _is_wall, _colors, _velocities,  radius);
     cout << "particles.positions: " << particles.positions.size() << endl;
     draw_positions.resizeLike(particles.positions);
     // cout << "hello" << endl;
