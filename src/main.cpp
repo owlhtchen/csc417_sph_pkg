@@ -53,16 +53,16 @@ int main()
     const double c = 0.7;
     
     // no velocities
-    // setup_ball_positions(_positions, _is_wall, _colors, 2 * radius);
-    // Particles particles(_positions, _is_wall, _colors, radius);
+    setup_ball_positions_1(_positions, _is_wall, _colors, 2 * radius);
+    // setup_ball_positions_2(_positions, _is_wall, _colors, 2 * radius);
+    Particles particles(_positions, _is_wall, _colors, radius);
 
     // velocities
-    setup_ball_positions(_positions, _is_wall, _colors, _velocities, 2 * radius);
-    Particles particles(_positions, _is_wall, _colors, _velocities,  radius);
+    // setup_ball_positions_3(_positions, _is_wall, _colors, _velocities, 2 * radius);
+    // Particles particles(_positions, _is_wall, _colors, _velocities,  radius);
+    
     cout << "particles.positions: " << particles.positions.size() << endl;
     draw_positions.resizeLike(particles.positions);
-    // cout << "hello" << endl;
-    // cout << "??? " << _positions.size() << endl;
 
     std::thread worker(simulation, std::ref(particles));
     updating = false;
