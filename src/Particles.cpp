@@ -17,7 +17,8 @@ using std::cout; using std::endl;
 
 // class Particles {
 
-    Particles::Particles(std::vector<double> _positions, std::vector<int> _is_wall,
+    Particles::Particles(
+        std::vector<double> _positions, std::vector<int> _is_wall, std::vector<double> _colors,
      double radius, double x_lower, double x_upper, double y_lower, int grid_per_dim): 
         num_particles(int(_positions.size()/3)), radius(radius),
         x_lower(x_lower), x_upper(x_upper), y_lower(y_lower), grid_per_dim(grid_per_dim) {
@@ -26,6 +27,7 @@ using std::cout; using std::endl;
             velocities.resize(num_particles, 3);
             densities.resize(num_particles);
             is_wall.resize(num_particles);
+            colors.resize(num_particles, 3);
 
             new_positions.resize(num_particles, 3);
             new_velocities.resize(num_particles, 3);
@@ -53,6 +55,9 @@ using std::cout; using std::endl;
                 positions(particleId, 0) = _positions[particleId*3];
                 positions(particleId, 1) = _positions[particleId*3+1];
                 positions(particleId, 2) = _positions[particleId*3+2];
+                colors(particleId, 0) = _colors[particleId*3];
+                colors(particleId, 1) = _colors[particleId*3+1];
+                colors(particleId, 2) = _colors[particleId*3+2];                
                 velocities(particleId, 0) = 0.0;
                 velocities(particleId, 1) = 0.0;
                 velocities(particleId, 2) = 0.0;

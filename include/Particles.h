@@ -30,6 +30,7 @@ class Particles {
     Eigen::MatrixXd positions;
     Eigen::MatrixXd velocities;
     Eigen::VectorXd densities;
+    Eigen::MatrixXd colors;
     std::vector<int> is_wall;
 
     Eigen::MatrixXd new_positions;
@@ -56,7 +57,7 @@ class Particles {
     int num_flattened_cells;
     double cell_width;
 
-    Particles(std::vector<double> _positions, std::vector<int> _is_wall,
+    Particles(std::vector<double> _positions, std::vector<int> _is_wall, std::vector<double> _colors,
     //  double radius, double x_lower = 0.0, double x_upper = 0.3, double y_lower = 0.0,
      double radius, double x_lower = 0.0, double x_upper = 0.35, double y_lower = 0.0,
      int grid_per_dim = 200);

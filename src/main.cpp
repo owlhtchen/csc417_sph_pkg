@@ -47,11 +47,12 @@ int main()
     
     vector<double> _positions;
     vector<int> _is_wall;
+    std::vector<double>  _colors;
     double radius = 3.0 / 400;
     const double c = 0.7;
 
-    setup_ball_positions(_positions, _is_wall, 2 * radius);
-    Particles particles(_positions, _is_wall, radius);
+    setup_ball_positions(_positions, _is_wall, _colors, 2 * radius);
+    Particles particles(_positions, _is_wall, _colors, radius);
     cout << "particles.positions: " << particles.positions.size() << endl;
     draw_positions.resizeLike(particles.positions);
     // cout << "hello" << endl;
@@ -63,7 +64,7 @@ int main()
     viewer.callback_post_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
         std::unique_lock<std::mutex> lk(cv_m);
         if(cv.wait_for(lk, 20ms, [] (){return true;})) {
-            viewer.data().set_points(draw_positions, Eigen::RowVector3d(1.0,1.0,1.0));
+            viewer.data().set_points(draw_positions, particles.colors);
             viewer.data().point_size = 5;
         }
         lk.unlock();
